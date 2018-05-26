@@ -74,10 +74,11 @@ class Dictionary:
 			self.biasLengths[length].append(word.lower())
 
 	def delete(self, letter):
-		for key, listWords in self.biasLengths.items():
+		print("delete %c" %letter)
+		for key in self.biasLengths:
 			# print(listWords)
-			temp = [word for word in listWords if letter not in word]
-			listWords = temp
+			self.biasLengths[key] = [word for word in self.biasLengths[key] if letter not in word]
+			# listWords = temp
 			# print(listWords)
 		for key, listWords in self.wordLengths.items():
 			temp = [word for word in listWords if letter not in word]
@@ -107,7 +108,8 @@ class LetterBank:
 			17: ['i', 'e', 'r'],
 			18: ['i', 'e', 'a'],
 			19: ['i', 'e', 'a'],
-			20: ['i', 'e']
+			20: ['i', 'e'],
+			26: ['e']	# dummy for when alphabet is inputted
 		}
 
 	def reloadLetters(self):
@@ -125,7 +127,7 @@ class LetterBank:
 				# print("%c not in array" % char)
 				continue
 			else:
-				if(char in self.frequency[len(char)]):
+				if(char in self.frequency[len(word)]):
 					lenFrequency = self.frequency[len(word)].index(char)
 					if(lenFrequency < score):
 						letter = char
@@ -137,16 +139,22 @@ class LetterBank:
 		if (letter != None):	# Likely all letters in this word has been chosen
 			self.unused.remove(letter)
 		if(letter == None):
+			print(letter)
 			letter = self.unused.pop(0)	# last resort just go down the list of frequent letters
 		return letter
+
+known = dict.fromkeys(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+	'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'])
+for key in known:
+	known[key] = False
 
 def matches(word1, word2):
 	for charPair in list(zip(word1, word2)):
 		if (charPair[0] == '_'):
 			if (not charPair[1].isalpha()):
 				return False
-			else:
-				continue
+			elif ((charPair[1] in known) and known[charPair[1]]):
+				return False
 		elif(charPair[0] != charPair[1]):
 			return False
 	return True
@@ -164,16 +172,23 @@ def guessLetter(state, dictionary): #REMOVE COMMAS (and apostrophes?)
 	mostBlanks = "a"
 	numBlanks = 0
 
-	# # run matching algorithm on every word with at least 1 blank,
-	# # choosing the one with the smallest pool of possibilities (higher chance of right word)
-	# candidatesArr = []
-	# for word in words:
-	# 	if '_' in word:
-	# 		candidates = findMatches(mostBlanks, dictionary.biasLengths[len(mostBlanks)])
-	# 		if len(candidates)==0: #preference the bias first, only defaulting on dictionary if no matches are found
-	# 			candidates = findMatches(mostBlanks, dictionary.wordLengths[len(mostBlanks)])
-	# 		candidatesArr.append(candidates)
-	# return min(candidatesArr, key=len)
+	# run matching algorithm on every word with at least 1 blank,
+	# choosing the one with the smallest pool of possibilities (higher chance of right word)
+	candidatesArr = []
+	for word in words:
+		if '_' in word:
+			candidates = findMatches(word, dictionary.biasLengths[len(word)])
+			# print(candidates)
+			if len(candidates)==0: #preference the bias first, only defaulting on dictionary if no matches are found
+				candidates = findMatches(word, dictionary.wordLengths[len(word)])
+				# print(candidates)
+			if len(candidates) != 0:
+				candidatesArr.append(candidates)
+	ret = []
+	if(len(candidatesArr) > 0):
+		ret = min(candidatesArr, key=len)
+	print(ret)
+	return ret
 
 	# toGuess = "_"
 	# #left to right, word that still needs to be decoded
@@ -182,15 +197,15 @@ def guessLetter(state, dictionary): #REMOVE COMMAS (and apostrophes?)
 	# 		toGuess = word
 	# 		continue
 
-	#Find word with most blanks in it
-	for word in words:
-		countBlanks = 0
-		for letter in word:
-			if letter == '_':
-				countBlanks += 1
-		if countBlanks > numBlanks:
-			mostBlanks = word
-			numBlanks = countBlanks
+	# #Find word with most blanks in it
+	# for word in words:
+	# 	countBlanks = 0
+	# 	for letter in word:
+	# 		if letter == '_':
+	# 			countBlanks += 1
+	# 	if countBlanks > numBlanks:
+	# 		mostBlanks = word
+	# 		numBlanks = countBlanks
 
 	# # Find longest word that has at least 1 unknown
 	# while "_" not in mostBlanks:
@@ -199,11 +214,11 @@ def guessLetter(state, dictionary): #REMOVE COMMAS (and apostrophes?)
 
 	# print(toGuess)
 	# candidates = findMatches(toGuess, dictionary.wordLengths[len(toGuess)])
-	#print(mostBlanks)
+	# print(mostBlanks)
 	candidates = findMatches(mostBlanks, dictionary.biasLengths[len(mostBlanks)])
 	if len(candidates)==0: #preference the bias first, only defaulting on dictionary if no matches are found
 		candidates = findMatches(mostBlanks, dictionary.wordLengths[len(mostBlanks)])
-	#print(candidates)
+	# print(candidates)
 	return candidates
 
 
@@ -215,9 +230,8 @@ myDict = Dictionary()
 letterBank = LetterBank()
 
 entered = "y"
-
+lives = 3
 while entered != "x":
-	lives = 3
 	words = guessLetter(game['state'], myDict)
 	letter = None
 	if(len(words)!=0):		#if it returned something, aka not empty
@@ -225,7 +239,11 @@ while entered != "x":
 			letter = letterBank.chooseLetter(word)
 			if(letter != None):
 				break
+	else:
+		print("no words")
+		letter = letterBank.chooseLetter("abcdefghijklmnopqrstuvwxyz")
 	print(letter)
+	known[letter] = True
 	try:
 		r = http.request("POST", "http://upe.42069.fun/2PFte",
 		headers={"Content-Type": "application/json"}, body=json.dumps({"guess": letter}))
@@ -247,7 +265,6 @@ while entered != "x":
 			myDict.delete(letter)
 
 	if('lyrics' in game): #if we lose, SCRAPE THOSE LYRICS
-		print(game)
 		with open("lyrics.txt", "a+") as lyricsFile:
 			for line in game['lyrics'].split():
 				# contents = lyricsFile.read()
@@ -262,6 +279,9 @@ while entered != "x":
 				myDict.addWordLen(line)
 		initGame()
 		letterBank.reloadLetters()
+		myDict.loadWords()
+		for key in known:
+			known[key] = False
 
 	# entered = input("Press Enter...")
-	time.sleep(1)
+	time.sleep(0.5)
