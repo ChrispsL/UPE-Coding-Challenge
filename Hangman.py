@@ -44,7 +44,7 @@ class Dictionary:
 			else:
 				self.biasLengths[length].append(word.lower())
 		self.wordLengths = {}
-		for word in self.wordsList:
+		for word in wordsList:
 			length = len(word)
 			if not length in self.wordLengths:
 				self.wordLengths[length] = [word.lower()]
@@ -134,7 +134,7 @@ class LetterBank:
 						score = self.unused.index(char)
 		if(letter == None):
 			# Last resort just go down the list of frequent letters
-			letter = self.unused.pop(0)
+			letter = self.unused[0]
 		self.unused.remove(letter)
 		self.known.append(letter)
 		return letter
@@ -153,7 +153,10 @@ def matches(unknown, candidate, bank):
 
 def findMatches(guess, arrWords, bank):
 	ret = []
-	arrWords = [word for word in arrWords for letter in word if (letter in bank.wrongGuess)]	# Remove all words that has a letter we wrongly guessed already
+	# for word in arrWords
+	#	for letter in word
+	#		if letter not in bank.wrongGuess
+	arrWords = [word for word in arrWords for letter in word if (letter not in bank.wrongGuess)]	# Remove all words that has a letter we wrongly guessed already
 	for candidate in arrWords:
 		if matches(guess, candidate, bank):
 			ret.append(candidate.replace(',','').replace(':','').replace('.','').replace('(','').replace(')','').replace('{',''))
@@ -175,7 +178,6 @@ def guessLetter(state, dictionary, bank):
 	ret = []
 	if(len(candidatesArr) > 0):
 		ret = min(candidatesArr, key=len)	# choose smallest list of candidates
-	print(ret)
 	return ret
 
 	# # Find word with most blanks in it
@@ -210,7 +212,7 @@ entered = "y"
 lives = 3
 
 while entered != "x":
-	words = guessLetter(game['state'], myDict)
+	words = guessLetter(game['state'], myDict, letterBank)
 	letter = None
 	if(len(words)!=0):		# if it returned something, aka not empty, call on letterBank to choose optimal letter
 		for word in words:
@@ -242,7 +244,7 @@ while entered != "x":
 	 # If we lose, SCRAPE THOSE LYRICS ('lyrics' is part of response if we use all our guesses)
 	if('lyrics' in game):
 		with open("bias.txt", "a+") as biasFile:
-			for line in game['bias'].split():
+			for line in game['lyrics'].split():
 				biasFile.write("%s\n" % line)	# TODO: store these in memory then write in intervals/when program exits?
 				myDict.addWordLen(line)
 		# Start a new game
